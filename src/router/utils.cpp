@@ -1,15 +1,13 @@
-#include <unistd.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <sys/wait.h>
-#include <signal.h>
-#include <string.h>
-
 #include "utils.h"
+
+void *sockaddr_to_sinaddr(struct sockaddr *sa) {
+    if (sa->sa_family == AF_INET) {
+        return &(((struct sockaddr_in*)sa) -> sin_addr);
+    }
+    else {
+        return &(((struct sockaddr_in6*)sa)->sin6_addr);
+    }
+}
 
 int hostname_to_ip(char * hostname , char* ip) {
     struct hostent *he;
@@ -28,6 +26,5 @@ int hostname_to_ip(char * hostname , char* ip) {
         strcpy(ip , inet_ntoa(*addr_list[i]) );
         return 0;
     }
-     
     return 1;
 }
