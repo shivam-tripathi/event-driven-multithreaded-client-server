@@ -2,6 +2,18 @@
 #ifndef UTILS_H
 #define UTILS_H
 
+#include <unistd.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <errno.h>
+#include <signal.h>
+#include <string.h>
+#include <map>
+
 // Enum stores various possible actions 
 // FTR : File transfer request 
 // CJA : Chat join action 
@@ -57,14 +69,22 @@ class Pack {
 	int pack; 
 	Packet packet;
 	void get_header_pack();
-	void get_data_pack() 
+	void get_data_pack();
 public:
+	Packet get_packet();
+};
 
+struct process_metadata {
+	int sockfd;
+	char sender_id[20];
+	char receiver_id[20];
+	sockaddr_storage *sender_saddr;
+	sockaddr_storage *receiver_saddr;
 };
 
 // Some other generic utility functions
 int hostname_to_ip(char *, char*);
 
-
+void *sockaddr_to_in(struct sockaddr *);
 
 #endif
