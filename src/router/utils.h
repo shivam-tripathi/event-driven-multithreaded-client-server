@@ -11,15 +11,22 @@
 #include <netdb.h>
 #include <errno.h>
 #include <signal.h>
-#include <string.h>
+#include <iostream>
+#include <string>
 #include <map>
+#include <vector>
+#include <utility>
+
+// using namespace std;
 
 // Enum stores various possible actions 
+// RTC : Request to connect
 // FTR : File transfer request 
 // CJA : Chat join action 
 // CPA : Chat post action 
 
 enum Action {
+	RTC,
 	FTR,
 	CJA, 
 	CPA
@@ -33,44 +40,34 @@ enum PackType {
 	DATA
 };
 
-// Header packet : Contains header information 
+// Header part contains header information - action and number of distinct messages
 // This is present in all packets
-struct header_pack {
-	short action;
-	size_t msg_size;
-	char msg[20];
-	header_pack (short x, char *str, int size) {
-		action = x; 
-		memcpy(msg, str, size);
-		msg_size = size;
-	}
-};
+// Packet struct encapsulates the header and data into a single packet
+// If just a generic packet, the data will point to NULL 
+// src_id is the connection id for the packet source 
+// dest_id is the connection id for the packet destination 
+// By default src_id and dest_id for the server is 0
 
-// Stores the data chunks to be transferred
-struct data_pack {
-	int size;
-	char data_chunk[(int)1e4];
-	data_pack (char *data, int size) {
-		this->size = size;
-		memcpy(this->data_chunk, data, size);
-	}
-};
-
-// Encapsulates the header and data packs into a single packet
-// If just a generic packet, the data_pack will point to NULL 
 struct Packet {
-	header_pack header;
-	data_pack data;
-	Packet(header_pack header, data_pack data) : header(header), data(data) {}
+	int action;
+	int src_id;
+	int dest_id;
+	int message_count;
+	char *data;
 };
 
 // Class to create and deliver a complete packet
-class Pack {
-	int pack; 
+class Pack { 
 	Packet packet;
-	void get_header_pack();
-	void get_data_pack();
+	void pack_header();
+	std::vector<std::string> msg;
 public:
+	int offset;
+	Pack(int);
+	void add_message(std::string msg);
+	void pack_data(char *);
+	char *serialize_packet(size_t buf_size);
+	Packet deserialize_packet(char *buf, size_t buf_size);
 	Packet get_packet();
 };
 
@@ -83,6 +80,7 @@ struct process_metadata {
 };
 
 // Some other generic utility functions
+
 int hostname_to_ip(char *, char*);
 
 void *sockaddr_to_in(struct sockaddr *);
