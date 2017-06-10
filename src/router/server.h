@@ -16,10 +16,11 @@ class Server {
 	int connection_count;
 	int sockfd;
 	int error;
+	int max_packet_size;
 	struct addrinfo hints;
 	struct addrinfo *servinfo;
 	struct sigaction signal_action;
-	std::vector<std::pair<int, int>> connections;
+	std::vector<std::tuple<int, int, std::string>> connections;
 
 	// Remove useless connections
 	void poll_connection();

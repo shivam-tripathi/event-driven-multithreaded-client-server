@@ -1,38 +1,24 @@
-#include <iostream>
-#include <stdlib.h>
-#include <unistd.h>
-#include <errno.h>
-#include <sys/types.h>
-#include <sys/socket.h>
-#include <netinet/in.h>
-#include <netdb.h>
-#include <arpa/inet.h>
-#include <sys/wait.h>
-#include <signal.h>
-
 #include "server.h"
-#include "utils.h"
-using namespace std;
 
 int main(int argc, char const *argv[])
 {
-	cout << "\n\n##################################################################" << endl;
-	cout << "# 	   Welcome to hosted end application                     #" << endl;
-	cout << "##################################################################" << endl;
+	std::cout << "\n\n##################################################################" << std::endl;
+	std::cout << "# 	   Welcome to hosted end application                     #" << std::endl;
+	std::cout << "##################################################################" << std::endl;
 
 	char host_name[20], ip[INET6_ADDRSTRLEN];
 	gethostname(host_name, sizeof host_name);
 	hostname_to_ip(host_name, ip);
 
-	cout << "You are connected by " << host_name << " on ip address " << ip << endl;
+	std::cout << "You are connected by " << host_name << " on ip address " << ip << std::endl;
 
-	int port_no;
+	std::string port;
 
-	cout << "Enter port number for the server to run: "; 
-	cin >> port_no; 
-	cout << "\nInitializing the server ..." << endl;
-	Server server(port_no);
-	cout << "Running ... " << endl;
+	std::cout << "Enter port number for the server to run: "; 
+	std::cin >> port; 
+	std::cout << "\nInitializing the server ..." << std::endl;
+	Server server(port);
+	std::cout << "Running ... " << std::endl;
 	server.run();
 
 	return 0;

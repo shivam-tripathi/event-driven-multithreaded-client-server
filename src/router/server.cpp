@@ -7,6 +7,9 @@ Server::Server(std::string port) {
 	this->process_limit = 25;
 	this->connection_limit = 100;
 	this->connection_count = 0;
+	this->max_packet_size = (int)2*(1e4); // 2kB
+
+	connections.emplace_back(std::tuple<int, int, std::string> (0, 0, "Server"));
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
@@ -42,6 +45,7 @@ void Server::run() {
 	socklen_t sin_size;
 	int new_fd;
 	char ip_addr[INET6_ADDRSTRLEN];
+	char buf[max_packet_size];
 
 	// Get socket, set socket options and bind it to the socket address
 	struct addrinfo *iter;
@@ -88,12 +92,25 @@ void Server::run() {
 
 	while (true) {
 		sin_size = sizeof connecter_address;
+
+		// A new connection opened
 		new_fd = accept(sockfd, (struct sockaddr*) &connecter_address, &sin_size);
+
 		if (new_fd == -1) {
 			perror("Server::run : accept");
 			continue;
 		}
+
 		// Get the socket address of the new connection 
 		inet_ntop(connecter_address.ss_family, sockaddr_to_in((struct sockaddr*)&connecter_address), ip_addr, sizeof ip_addr);
+		
+		int stat = recv(new_fd, buf, sizeof buf, 0);
+        if (stat == -1 || stat == 0) {
+            perror("Server::receive");
+            continue;
+        }
+
+		std::cout << "Connected to " << ip_addr << " as " << buf << std::endl;
+		connections.emplace_back(std::tuple<int, int, std::string> (++connection_count, new_fd, buf));
 	}
 }
