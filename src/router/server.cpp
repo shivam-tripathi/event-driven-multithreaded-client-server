@@ -1,15 +1,15 @@
 #include "server.h"
 
-
 Server::Server(std::string port) {
 	this->port = port;
 	this->backlog = 10;
 	this->process_limit = 25;
-	this->connection_limit = 100;
+	this->connection_limit = 2;
 	this->connection_count = 0;
 	this->max_packet_size = (int)2*(1e4); // 2kB
+	this->connections = new connection_info[connection_limit];
 
-	connections.emplace_back(std::tuple<int, int, std::string> (0, 0, "Server"));
+	connections[connection_count++] = connection_info(0, 0, "Server");
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
@@ -22,22 +22,16 @@ Server::Server(std::string port) {
 	}
 }
 
-void sigchld_handler(int s) {
-    int saved_errno = errno;
-    int status;
-    while(true) {
-        pid_t pid = waitpid(-1, &status, WNOHANG);
+void Server::poll_connections() {
+	for (int i=1; i<=connection_count; i++) {
+	}
+}
 
-        if (!pid) return;
-
-        if (WEXITSTATUS(status) != 0) {
-            char failed[] = "Failed to send file. Please retry.";
-            process_metadata *pmd = running_processes[pid];
-            send(pmd->sockfd, failed, sizeof failed, 0);
-        }
-
-        running_processes.erase(pid);
-    }
+void Server::delete_connection(pid_t pid) {
+	kill(pid, SIGKILL);
+	bool found = 0;
+	for (int i=1; i<=connection_count; i++) {
+	}
 }
 
 void Server::run() {
@@ -59,7 +53,7 @@ void Server::run() {
 		if (setsockopt(sockfd, SOL_SOCKET, SO_REUSEADDR, &status, sizeof status) == -1) {
 			perror("Server::run : setsockopt");
 			exit(1);
-		} 
+		}
 
 		if (bind(sockfd, iter->ai_addr, iter->ai_addrlen) == -1) {
 			close(sockfd);
@@ -101,16 +95,44 @@ void Server::run() {
 			continue;
 		}
 
-		// Get the socket address of the new connection 
+		// Get the socket address of the new connection
 		inet_ntop(connecter_address.ss_family, sockaddr_to_in((struct sockaddr*)&connecter_address), ip_addr, sizeof ip_addr);
-		
+
+        if (connection_count > connection_limit) {
+        	std::string str = "Connection limit exceeded\n\0";
+        	if (send(new_fd, str.c_str(), str.size(), 0) == -1) {
+                perror("send");
+        	}
+        	close(new_fd);
+            continue;
+        }
+
+    	std::string str = "Connection accepted. Select username.\n\0";
+    	if (send(new_fd, str.c_str(), str.size(), 0) == -1) {
+    		perror("send");
+    	}
+
 		int stat = recv(new_fd, buf, sizeof buf, 0);
         if (stat == -1 || stat == 0) {
             perror("Server::receive");
             continue;
         }
 
-		std::cout << "Connected to " << ip_addr << " as " << buf << std::endl;
-		connections.emplace_back(std::tuple<int, int, std::string> (++connection_count, new_fd, buf));
+		std::cout << "\nConnected to " << ip_addr << " as " << buf;
+
+		pid_t pid = fork();
+		if (pid == 0) {
+			close(sockfd);
+			// ManageConnection mc (getpid, new_fd);
+			exit(0);
+		}
+		connections[connection_count++] = connection_info(pid, new_fd, buf);
+		running_processes.insert(pid);
+	}
+
+	// Clear any defunct process if left
+	while(running_processes.size() != 0) {
+		pid_t pid = waitpid(-1, NULL, WNOHANG);
+		running_processes.erase(pid);
 	}
 }
