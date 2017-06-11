@@ -4,10 +4,6 @@
 
 #include "utils.h"
 
-static std::map<pid_t, process_metadata*> running_processes;
-static void sigchld_handler(int s);
-static int running;
-
 class Server {
 	std::string port;
 	int backlog;
@@ -20,10 +16,11 @@ class Server {
 	struct addrinfo hints;
 	struct addrinfo *servinfo;
 	struct sigaction signal_action;
-	std::vector<std::tuple<int, int, std::string>> connections;
+	struct connection_info *connections;
 
 	// Remove useless connections
-	void poll_connection();
+	void poll_connections();
+	void delete_connection(int);
 public:
 	Server(std::string);
 	void run();
