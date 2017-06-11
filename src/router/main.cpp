@@ -14,8 +14,9 @@ int main(int argc, char const *argv[])
 
 	std::string port;
 
-	std::cout << "Enter port number for the server to run: "; 
-	std::cin >> port; 
+	std::cout << "Enter port number for the server to run: ";
+	std::cin >> port;
+
 	std::cout << "\nInitializing the server ..." << std::endl;
 	Server server(port);
 	std::cout << "Running ... " << std::endl;
