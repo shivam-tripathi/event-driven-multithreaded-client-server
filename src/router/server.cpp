@@ -1,15 +1,24 @@
 #include "server.h"
 
+bool kill_threads = false;
+
+void *wrapper_function(void * arg) {
+	Server *server = ((Wrapper *)arg)->server;
+	server->poll_connections();
+	pthread_exit(NULL);
+}
+
 Server::Server(std::string port) {
 	this->port = port;
 	this->backlog = 10;
 	this->process_limit = 25;
 	this->connection_limit = 2;
 	this->connection_count = 0;
+	this->id = 0;
 	this->max_packet_size = (int)2*(1e4); // 2kB
 	this->connections = new connection_info[connection_limit];
 
-	connections[connection_count++] = connection_info(0, 0, "Server");
+	connections[connection_count++] = connection_info(id++, 0, "Server");
 
 	memset(&hints, 0, sizeof hints);
 	hints.ai_family = AF_UNSPEC;
@@ -23,23 +32,50 @@ Server::Server(std::string port) {
 }
 
 void Server::poll_connections() {
-	for (int i=1; i<=connection_count; i++) {
+	Packet packet = get_default_packet();
+	while(true) {
+
+		if (kill_threads) {
+			pthread_exit(NULL);
+		}
+
+		for (int i=1; i<=connection_count && connections; i++) {
+			// Implement polling functions
+		}
 	}
 }
 
-void Server::delete_connection(pid_t pid) {
-	kill(pid, SIGKILL);
-	bool found = 0;
+void Server::delete_connection(int connection_id) {
+	bool found = false;
 	for (int i=1; i<=connection_count; i++) {
+		if (!found) {
+			if(!connections) {
+				break;
+			}
+			if (connections[i].connection_id == connection_id) {
+				close(connections[i].sock_fd);
+				found = true;
+			}
+			continue;
+		}
+		connections[i-1] = connections[i];
 	}
+	connection_count--;
+}
+
+void Server::delete_all() {
+	for (int i=1; i<=connection_count; i++) {
+		close(connections[i].sock_fd);
+	}
+	delete connections;
 }
 
 void Server::run() {
 	struct sockaddr_storage connecter_address;
 	socklen_t sin_size;
 	int new_fd;
-	char ip_addr[INET6_ADDRSTRLEN];
-	char buf[max_packet_size];
+	pthread_t temp;
+	char ip_addr[INET6_ADDRSTRLEN], buf[max_packet_size];
 
 	// Get socket, set socket options and bind it to the socket address
 	struct addrinfo *iter;
@@ -75,14 +111,11 @@ void Server::run() {
 		exit(1);
 	}
 
-	signal_action.sa_handler = sigchld_handler;
-	signal_action.sa_flags = SA_RESTART;
-	if (sigaction(SIGCHLD, &signal_action, NULL) == -1) {
-		perror("Server::run : sigaction");
-		exit(1);
-	}
-
 	std::cout << "Server running. Awaiting connections!" << std::endl;
+
+	pthread_t poll_connections_thread;
+	Wrapper *wrapper = new Wrapper(this);
+	pthread_create(&poll_connections_thread, NULL, wrapper_function, (void *)wrapper);
 
 	while (true) {
 		sin_size = sizeof connecter_address;
@@ -120,19 +153,9 @@ void Server::run() {
 
 		std::cout << "\nConnected to " << ip_addr << " as " << buf;
 
-		pid_t pid = fork();
-		if (pid == 0) {
-			close(sockfd);
-			// ManageConnection mc (getpid, new_fd);
-			exit(0);
-		}
-		connections[connection_count++] = connection_info(pid, new_fd, buf);
-		running_processes.insert(pid);
+		connections[connection_count++] = connection_info(id++, new_fd, buf);
 	}
 
-	// Clear any defunct process if left
-	while(running_processes.size() != 0) {
-		pid_t pid = waitpid(-1, NULL, WNOHANG);
-		running_processes.erase(pid);
-	}
+	kill_threads = true;
+	delete_all();
 }

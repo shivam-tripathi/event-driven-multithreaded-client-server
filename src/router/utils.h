@@ -17,6 +17,7 @@
 #include <set>
 #include <vector>
 #include <utility>
+#include <pthread.h>
 
 // using namespace std;
 
@@ -25,6 +26,7 @@
 // FTR : File transfer request
 // CJA : Chat join action
 // CPA : Chat post action
+// CPA : Connection ping action
 
 enum Action {
 	RTC,
@@ -64,27 +66,23 @@ class Pack {
 	std::vector<std::string> msg;
 public:
 	int offset;
-	Pack(int);
-	void add_message(std::string msg);
+	void add_message(std::string);
 	void pack_data(char *);
-	char *serialize_packet(size_t buf_size);
-	Packet deserialize_packet(char *buf, size_t buf_size);
+	char *serialize_packet(Packet, size_t);
+	Packet deserialize_packet(char *, size_t);
 	Packet get_packet();
+	Packet get_default_packet();
 };
 
 struct connection_info {
-	pid_t pid;
+	int connection_id;
 	int sock_fd;
 	std::string str;
 	connection_info() {}
-	connection_info(pid_t pid, int fd, std::string str) : pid(pid), sock_fd(fd), str(str) {}
+	connection_info(int connection_id, int fd, std::string str) : connection_id(connection_id), sock_fd(fd), str(str) {}
 };
 
 // Some other generic utility functions
-
-extern std::set<pid_t> running_processes;
-
-void sigchld_handler(int s);
 
 int hostname_to_ip(char *, char*);
 

@@ -1,9 +1,8 @@
 #include "utils.h"
 
-std::set<pid_t> running_processes;
-
-Pack::Pack(int action) {
-    packet.action = action;
+Packet Pack::get_default_packet () {
+    Packet packet;
+    return packet;
 }
 
 void *sockaddr_to_in(struct sockaddr *sa) {
@@ -33,18 +32,4 @@ int hostname_to_ip(char * hostname , char* ip) {
         return 0;
     }
     return 1;
-}
-
-void sigchld_handler(int s) {
-    int saved_errno = errno;
-    int status;
-    pid_t pid;
-    while ((pid = waitpid(-1, &status, WNOHANG)) > 0) {
-        running_processes.erase(pid);
-        if (WEXITSTATUS(status) != 0) {
-            std::cout << "Process with id " << pid << " ended unexpectedly." << std::endl;
-            // Possible error handling, if needed
-        }
-    }
-    errno = saved_errno;
 }
