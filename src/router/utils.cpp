@@ -1,7 +1,6 @@
 #include "utils.h"
 
 Packet Pack::get_default_packet () {
-    Packet packet;
     return packet;
 }
 
@@ -32,4 +31,19 @@ int hostname_to_ip(char * hostname , char* ip) {
         return 0;
     }
     return 1;
+}
+
+int setnonblock (int fd) {
+    int flags;
+
+    flags = fcntl(fd, F_GETFL);
+    if (flags < 0) {
+        return flags;
+    }
+
+    flags |= O_NONBLOCK;
+    if (fcntl(fd, F_SETFL, flags) < 0) {
+        return -1;
+    }
+    return 0;
 }

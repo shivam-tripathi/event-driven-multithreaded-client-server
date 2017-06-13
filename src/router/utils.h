@@ -6,6 +6,8 @@
 #include <stdlib.h>
 #include <sys/types.h>
 #include <sys/socket.h>
+#include <event.h>
+#include <fcntl.h>
 #include <netinet/in.h>
 #include <arpa/inet.h>
 #include <netdb.h>
@@ -76,16 +78,21 @@ public:
 
 struct connection_info {
 	int connection_id;
-	int sock_fd;
+	int sockfd;
 	std::string str;
+	struct bufferevent *buf_ev;
+	struct evbuffer *output_buffer;
+
 	connection_info() {}
-	connection_info(int connection_id, int fd, std::string str) : connection_id(connection_id), sock_fd(fd), str(str) {}
+	connection_info(int connection_id, int fd, std::string str) : connection_id(connection_id), sockfd(fd), str(str) {}
 };
 
 // Some other generic utility functions
 
 int hostname_to_ip(char *, char*);
 
-void *sockaddr_to_in(struct sockaddr *);
+void *sockaddr_to_in(struct sockaddr *); // Get sin_addr from the sockaddr depending upon ip version
+
+int setnonblock(int); // Make a socket non blocking
 
 #endif
